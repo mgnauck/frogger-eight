@@ -3,47 +3,150 @@ version 8
 __lua__
 -- unik pico-8 domination
 -- gfx by tomic, code by warp
-player   = { x=64, y=64, w=1, h=1, sprite_ofs=1, anim_step=0, max_steps=2, flip_x=false, flip_y=false }
-CAR      = { x=64, y=32, w=1, h=1, sprite_ofs=3, anim_step=0, max_steps=2, flip_x=false, flip_y=false }
-obstacle = { x=64, y=32, w=1, h=1, sprite_ofs=5, anim_step=0, max_steps=2, flip_x=false, flip_y=false }
+
+world = {}
+
+function make_entity(x, y, sprite_ofs, sprite_count, flip_x, flip_y, width, height)
+ 
+ local e = {}
+
+ local fx = false
+ local fy = false
+
+ local w  = 1
+ local h  = 1
+
+ if(flip_x != nil) then
+  fx = flip_x
+  fy = flip_y
+ end
+
+ if(width != nil) then
+  w = width
+  h = height
+ end
+
+ e.x            = x
+ e.y            = y
+ e.sprite_ofs   = sprite_ofs
+ e.sprite_count = sprite_count
+ e.anim_step    = 0
+ e.w            = w
+ e.h            = h
+ e.flip_x       = fx
+ e.flip_y       = fy
+
+ return e
+
+end
+
+function make_player(num, x, y, sprite_ofs, sprite_count)
+
+ local p = make_entity(x, y, sprite_ofs, sprite_count)
+
+ p.num  = num
+ p.life = 3
+
+ return p
+
+end
+
+function make_car(x, y, sprite_ofs, sprite_count, dir)
+
+ local c = make_entity(x, y, sprite_ofs, sprite_count)
+
+ c.speed = rnd_int(10)
+ c.dir   = rnd_int(1)
+ c.color = rnd_int(16)
+
+ -- right to left, flip sprite
+ if(c.dir == 0) c.flip_x = true
+
+ return c
+
+end
+
+function create_world(car_count, obstacle_count)
+
+ world = {}
+
+ -- player
+ world[players] = {}
+ add(world[players], make_player(1, 64, 32, 1, 2))
+
+ --cars
+ world[cars] = {}
+ for i=0,car_count do
+  add(world[cars], make_car(8 + rnd_int(112), 8 + rnd_int(112), 3, 2))
+ end
+
+ -- obstacles
+ world[obstacles] = {}
+ for i=0,obstacle_count do
+  add(world[obstacles], make_entity(8 + rnd_int(112), 8 + rnd_int(112), 5, 1))
+ end
+
+ return world
+
+end
 
 function draw_entity(e)
- spr(e.sprite_ofs + e.anim_step,e.x,e.y,e.w,e.h,e.flip_x,e.flip_y)
+ spr(e.sprite_ofs + e.anim_step, e.x, e.y, e.w, e.h, e.flip_x, e.flip_y)
 end
 
 function update_entity(e)
  
  local moved = false
 
- if (btnp(0)) then e.x -= 1; moved = true; end
- if (btnp(1)) then e.x += 1; moved = true; end
- if (btnp(2)) then e.y -= 1; moved = true; end
- if (btnp(3)) then e.y += 1; moved = true; end
+ if(btnp(0)) then e.x -= 1; moved = true; end
+ if(btnp(1)) then e.x += 1; moved = true; end
+ if(btnp(2)) then e.y -= 1; moved = true; end
+ if(btnp(3)) then e.y += 1; moved = true; end
 
- if (moved) then
- 	player.anim_step = (player.anim_step + 1) % player.max_steps
+ if(moved) then
+ 	e.anim_step = (e.anim_step + 1) % e.sprite_count
  end
  
 end
 
+function _init()
+
+ world = create_world(world, 5, 3)
+
+end
+
 function _draw()
+ 
  cls()
- print("hello world ‡ unik on pico-8")
- draw_entity(player)
- spr(1,64,80,1,1,0,0)
+
+ -- draw entities
+ foreach(world[players], draw_entity)
+ foreach(world[cars], draw_entity)
+ foreach(world[obstacles], draw_entity)
+ 
 end
 
 function _update()
- update_entity(player)
+
+ -- update players
+ foreach(world[players], update_entity())
+
 end
+
+-- utils
+
+function rnd_int(x)
+ return flr(rnd(x))
+end
+
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000003333000033330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700038338303383383300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000333333330333333000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000033333300333333000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700033333303333333300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000003003000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000002200000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000003333000033330008888880088888800222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700038338303383383308888880088888800222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000333333330333333088888888888888880222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000033333300333333088888888888888880222202000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700033333303333333384588458854885480222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000003003000000000005400540045004500022220000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
