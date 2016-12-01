@@ -3,16 +3,9 @@ version 8
 __lua__
 -- unik pico-8 domination
 -- gfx by tomic, code by warp
-player = {}
-player.x          = 64
-player.y          = 64
-player.w          = 1
-player.h          = 1
-player.sprite_ofs = 1
-player.anim_step  = 0
-player.max_steps  = 2
-player.flip_x     = false
-player.flip_y     = false
+player   = { x=64, y=64, w=1, h=1, sprite_ofs=1, anim_step=0, max_steps=2, flip_x=false, flip_y=false }
+CAR      = { x=64, y=32, w=1, h=1, sprite_ofs=3, anim_step=0, max_steps=2, flip_x=false, flip_y=false }
+obstacle = { x=64, y=32, w=1, h=1, sprite_ofs=5, anim_step=0, max_steps=2, flip_x=false, flip_y=false }
 
 function draw_entity(e)
  spr(e.sprite_ofs + e.anim_step,e.x,e.y,e.w,e.h,e.flip_x,e.flip_y)
