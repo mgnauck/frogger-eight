@@ -31,59 +31,76 @@ function make_entity(x, y, sprite_ofs, sprite_count, flip_x, flip_y, width, heig
  e.sprite_ofs   = sprite_ofs
  e.sprite_count = sprite_count
  e.anim_step    = 0
- e.w            = w
- e.h            = h
  e.flip_x       = fx
  e.flip_y       = fy
+ e.w            = w
+ e.h            = h
 
  return e
 
 end
 
-function make_player(num, x, y, sprite_ofs, sprite_count)
+function make_player(player_speed, num, x, y, sprite_ofs, sprite_count)
 
  local p = make_entity(x, y, sprite_ofs, sprite_count)
 
- p.num  = num
- p.life = 3
+ p.num   = num
+ p.speed = player_speed
+ p.life  = 3
 
  return p
 
 end
 
-function make_car(x, y, sprite_ofs, sprite_count, dir)
+function make_car(x, y, direction, speed, sprite_ofs, sprite_count, dir)
 
  local c = make_entity(x, y, sprite_ofs, sprite_count)
 
- c.speed = rnd_int(10)
- c.dir   = rnd_int(1)
+ c.speed = speed
+ c.dir   = direction
  c.color = rnd_int(16)
 
  -- right to left, flip sprite
- if(c.dir == 0) c.flip_x = true
+ if(c.dir == 0) then
+  c.flip_x = true
+  c.dir    = -1
+ end
 
  return c
 
 end
 
-function create_world(car_count, obstacle_count)
+function create_world(player_speed, slot_count, min_cars_per_slot, max_cars_per_slot, min_speed, max_speed, obstacle_count)
 
- world = {}
+ local world = {}
 
- -- player
- world[players] = {}
- add(world[players], make_player(1, 64, 32, 1, 2))
 
  --cars
- world[cars] = {}
- for i=0,car_count do
-  add(world[cars], make_car(8 + rnd_int(112), 8 + rnd_int(112), 3, 2))
+ world.cars = {}
+ 
+ local slot_start = (128 - (8 * slot_count)) / 2
+ 
+ for j=0,slot_count-1 do
+
+  local cars_per_slot = min_cars_per_slot + rnd_int(max_cars_per_slot - min_cars_per_slot)
+  local car_dist      = 128 / cars_per_slot
+  local direction     = rnd_int(2)
+  local speed         = (5 - cars_per_slot) * 0.1 + min_speed + rnd(max_speed - min_speed)
+ 
+  for i=0,cars_per_slot - 1 do
+   add(world.cars, make_car(i * car_dist, slot_start + j * 8, direction, speed, 3, 2))
+  end
+ 
  end
 
+ -- player
+ world.players = {}
+ add(world.players, make_player(player_speed, 1, 32 + rnd_int(9) * 8, slot_start - 8, 1, 2))
+
  -- obstacles
- world[obstacles] = {}
- for i=0,obstacle_count do
-  add(world[obstacles], make_entity(8 + rnd_int(112), 8 + rnd_int(112), 5, 1))
+ world.obstacles = {}
+ for i=1,obstacle_count do
+  add(world.obstacles, make_entity(8 + rnd_int(112), 8 + rnd_int(112), 5, 1))
  end
 
  return world
@@ -94,14 +111,14 @@ function draw_entity(e)
  spr(e.sprite_ofs + e.anim_step, e.x, e.y, e.w, e.h, e.flip_x, e.flip_y)
 end
 
-function update_entity(e)
+function update_player(e)
  
  local moved = false
 
- if(btnp(0)) then e.x -= 1; moved = true; end
- if(btnp(1)) then e.x += 1; moved = true; end
- if(btnp(2)) then e.y -= 1; moved = true; end
- if(btnp(3)) then e.y += 1; moved = true; end
+ if(btnp(0)) then e.x -= e.speed; moved = true; end
+ if(btnp(1)) then e.x += e.speed; moved = true; end
+ if(btnp(2)) then e.y -= e.speed; moved = true; end
+ if(btnp(3)) then e.y += e.speed; moved = true; end
 
  if(moved) then
  	e.anim_step = (e.anim_step + 1) % e.sprite_count
@@ -109,9 +126,20 @@ function update_entity(e)
  
 end
 
+function update_car(e)
+ 
+ e.x += e.speed * e.dir
+
+ if(e.x > 128) e.x = -8
+ if(e.x < -8) e.x = 128
+
+ e.anim_step = (e.anim_step + 1) % e.sprite_count
+
+end
+
 function _init()
 
- world = create_world(world, 5, 3)
+ world = create_world(8, 8, 2, 5, 0.3, 1.6, 3)
 
 end
 
@@ -119,21 +147,20 @@ function _draw()
  
  cls()
 
- -- draw entities
- foreach(world[players], draw_entity)
- foreach(world[cars], draw_entity)
- foreach(world[obstacles], draw_entity)
+ foreach(world.players, draw_entity)
+ foreach(world.cars, draw_entity)
+ --foreach(world.obstacles, draw_entity)
  
 end
 
 function _update()
 
- -- update players
- foreach(world[players], update_entity())
+ foreach(world.players, update_player)
+ foreach(world.cars, update_car)
 
 end
 
--- utils
+--------- utils ---------
 
 function rnd_int(x)
  return flr(rnd(x))
@@ -142,10 +169,10 @@ end
 __gfx__
 00000000000000000000000000000000000000000002200000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000003333000033330008888880088888800222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700038338303383383308888880088888800222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000333333330333333088888888888888880222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700038338303383383308888cc008888cc00222202000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000333333330333333088888888888888880222202000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00077000033333300333333088888888888888880222202000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700033333303333333384588458854885480222222000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700033333303333333384588458854885480222022000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000003003000000000005400540045004500022220000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
