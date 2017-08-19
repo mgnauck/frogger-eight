@@ -5,6 +5,7 @@ __lua__
 -- gfx by tomic, code by warp
 
 world = {}
+gamestate = { running = false, collision_count = 0 }
 
 function make_entity(x, y, sprite_ofs, sprite_count, flip_x, flip_y, width, height)
  
@@ -74,7 +75,6 @@ function create_world(player_speed, slot_count, min_cars_per_slot, max_cars_per_
 
  local world = {}
 
-
  --cars
  world.cars = {}
  
@@ -127,7 +127,7 @@ function update_player(e)
 end
 
 function update_car(e)
- 
+
  e.x += e.speed * e.dir
 
  if(e.x > 128) e.x = -8
@@ -137,9 +137,26 @@ function update_car(e)
 
 end
 
+function is_point_in_entity_bbox(px, py, e)
+ return (px >= e.x and px < e.x + e.w) and (py >= e.y and py < e.y + e.h)
+end
+
+function check_collision(e1, e2)
+
+ return (
+  is_point_in_entity_bbox(e1.x, e1.y, e2) or
+  is_point_in_entity_bbox(e1.x + e1.w, e1.y, e2) or
+  is_point_in_entity_bbox(e1.x + e1.w, e1.y + e1.h, e2) or
+  is_point_in_entity_bbox(e1.x, e1.y + e1.h, e2)
+ )
+
+end
+
 function _init()
 
  world = create_world(8, 8, 2, 5, 0.3, 1.6, 3)
+
+ gamestate.running = true
 
 end
 
@@ -150,13 +167,40 @@ function _draw()
  foreach(world.players, draw_entity)
  foreach(world.cars, draw_entity)
  --foreach(world.obstacles, draw_entity)
- 
+
+ print(gamestate.collision_count)
+
 end
 
 function _update()
 
  foreach(world.players, update_player)
  foreach(world.cars, update_car)
+ 
+ -- check collision
+ for j = 1,#world.players do
+
+  local player = world.players[j]
+
+  for i = 1,#world.cars do
+
+   if check_collision(player, world.cars[i]) then
+    gamestate.collision_count += 1
+    break
+   end
+
+  end
+
+ end
+
+ -- update global gamestate
+ if gamestate.collision_count > 10 then
+  gamestate.running = false
+ end
+
+ if not gamestate.running then
+  exit(0)
+ end
 
 end
 
